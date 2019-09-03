@@ -1,1 +1,2 @@
 # curly-clouds
+Microservice framework.
