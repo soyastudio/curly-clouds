@@ -1,4 +1,4 @@
-package soya.framework.curly.jersey.configuration;
+package soya.framework.curly.application.configuration;
 
 import io.swagger.jaxrs.config.BeanConfig;
 import io.swagger.jaxrs.listing.ApiListingResource;
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class JerseyConfiguration extends SpringJerseyRestDispatcherConfig {
     private Swagger swagger;
     public JerseyConfiguration() {
-        packages("soya.framework.curly.jersey.api");
+        packages("soya.framework.curly.application.api");
         this.swagger = swaggerConfig();
     }
 
@@ -54,7 +54,7 @@ public class JerseyConfiguration extends SpringJerseyRestDispatcherConfig {
         swaggerConfigBean.setContact("wen_qun@hotmail.com");
         swaggerConfigBean.setSchemes(new String[]{"http"});
         swaggerConfigBean.setBasePath("/api");
-        swaggerConfigBean.setResourcePackage("soya.framework.curly.jersey.api");
+        swaggerConfigBean.setResourcePackage("soya.framework.curly.application.api");
         swaggerConfigBean.setPrettyPrint(true);
         swaggerConfigBean.setScan(true);
 

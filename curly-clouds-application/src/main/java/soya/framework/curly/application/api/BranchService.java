@@ -1,4 +1,4 @@
-package soya.framework.curly.jersey.api;
+package soya.framework.curly.application.api;
 
 import io.swagger.annotations.Api;
 

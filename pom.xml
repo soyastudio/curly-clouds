@@ -133,6 +133,8 @@
         <module>curly-clouds-core</module>
         <module>curly-clouds-rest</module>
         <module>curly-clouds-application</module>
+
+        <module>zoya</module>
     </modules>
 
 </project>

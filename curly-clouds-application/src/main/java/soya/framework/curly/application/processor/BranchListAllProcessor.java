@@ -1,4 +1,4 @@
-package soya.framework.curly.jersey.processor;
+package soya.framework.curly.application.processor;
 
 import org.springframework.stereotype.Component;
 import soya.framework.curly.ProcessorNotImplementException;
