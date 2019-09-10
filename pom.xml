@@ -162,7 +162,7 @@
         <module>curly-clouds-commons</module>
         <module>curly-clouds-core</module>
         <module>curly-clouds-rest</module>
-        <module>curly-clouds-jersey</module>
+        <module>curly-clouds-application</module>
     </modules>
 
 </project>
