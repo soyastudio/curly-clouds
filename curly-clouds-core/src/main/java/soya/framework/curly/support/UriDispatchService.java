@@ -2,6 +2,7 @@ package soya.framework.curly.support;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.gson.Gson;
 import soya.framework.curly.*;
 
 import java.util.Collection;
@@ -9,11 +10,19 @@ import java.util.Map;
 import java.util.Set;
 
 public abstract class UriDispatchService implements DispatchService, DispatchRegistration {
+    private final String name;
     private ImmutableSet<String> schemas;
     private ImmutableMap<String, ? extends DispatchMethod> methods = ImmutableMap.<String, DispatchMethod>builder().build();
     private ImmutableMap<String, ? extends Operation> processors = ImmutableMap.<String, Operation>builder().build();
 
+    private SessionDeserializer deserializer;
+
     public UriDispatchService() {
+        this(new DefaultSessionDeserializer());
+    }
+
+    public UriDispatchService(SessionDeserializer deserializer) {
+        this.deserializer = deserializer;
         Class<?> c = getClass();
         DispatchContext context = c.getAnnotation(DispatchContext.class);
         while (context == null) {
@@ -27,6 +36,7 @@ public abstract class UriDispatchService implements DispatchService, DispatchReg
         if(context == null) {
             throw new IllegalArgumentException("Cannot find annotation 'DispatchContext' from class: " + getClass().getName());
         }
+        this.name = context.name();
 
         ImmutableSet.Builder<String> builder = ImmutableSet.<String>builder();
         for (String sch : context.schema()) {
@@ -81,6 +91,11 @@ public abstract class UriDispatchService implements DispatchService, DispatchReg
     }
 
     @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
     public Set<String> schemas() {
         return schemas;
     }
@@ -106,4 +121,27 @@ public abstract class UriDispatchService implements DispatchService, DispatchReg
     }
 
     public abstract void registerSubjects(Class<?>[] subjects);
+
+
+    @Override
+    public Object dispatch(Object caller, String uri, Object[] args) throws DispatchException {
+        if (!contains(uri)) {
+            throw new DispatchException("Rest method is not defined for uri: " + uri);
+        }
+
+        Invocation invocation = getDispatchMethod(uri).createInvocation(caller, args);
+        Operation processor = getProcessor(uri);
+
+        if (processor == null) {
+            throw new DispatchException("Rest processor is not defined for uri: " + uri);
+        }
+
+        Session session = createSession(invocation);
+        processor.process(session);
+        return deserializer.deserialize(session);
+    }
+
+    protected Session createSession(Invocation invocation) {
+        return new DefaultSession(invocation);
+    }
 }

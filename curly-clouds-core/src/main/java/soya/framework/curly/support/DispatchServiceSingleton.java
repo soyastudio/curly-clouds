@@ -1,5 +1,6 @@
 package soya.framework.curly.support;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import soya.framework.curly.*;
 
@@ -13,12 +14,11 @@ public abstract class DispatchServiceSingleton implements DispatchService {
     protected DispatchServiceSingleton() {
     }
 
-    public static DispatchServiceBuilder builder() {
-        return new DispatchServiceBuilder();
-    }
-
     public static DispatchService getInstance() {
         return instance;
+    }
+    public static DispatchServiceBuilder builder() {
+        return new DispatchServiceBuilder();
     }
 
     public static class DispatchServiceBuilder {
@@ -43,14 +43,18 @@ public abstract class DispatchServiceSingleton implements DispatchService {
         }
     }
 
-    static class CompositeDispatchService extends DispatchServiceSingleton implements DispatchRegistration {
+    static class CompositeDispatchService extends DispatchServiceSingleton implements DispatchRegistration, DispatchServiceComposite {
         private DispatchExecutor executor;
-        private ImmutableSet<UriDispatchService> dispatchServices;
+        private ImmutableMap<String, UriDispatchService> dispatchServices;
         private Map<String, DispatchService> dispatchServiceMappings = new HashMap<>();
 
         protected CompositeDispatchService(DispatchExecutor executor, Set<UriDispatchService> dispatchServices) {
             this.executor = executor;
-            this.dispatchServices = ImmutableSet.copyOf(dispatchServices);
+            ImmutableMap.Builder<String, UriDispatchService> builder = ImmutableMap.builder();
+            dispatchServices.forEach(d -> {
+                builder.put(d.getName(), d);
+            });
+            this.dispatchServices = builder.build();
             instance = this;
         }
 
@@ -77,7 +81,7 @@ public abstract class DispatchServiceSingleton implements DispatchService {
                 dispatchService = dispatchServiceMappings.get(uri);
 
             } else {
-                for (UriDispatchService service : dispatchServices) {
+                for (UriDispatchService service : dispatchServices.values()) {
                     if (service.match(uri)) {
                         dispatchServiceMappings.put(uri, service);
                         dispatchService = service;
@@ -106,10 +110,26 @@ public abstract class DispatchServiceSingleton implements DispatchService {
             }
         }
 
+        public String[] getDispatchServices() {
+            List<String> list = new ArrayList<>(dispatchServices.keySet());
+            Collections.sort(list);
+            return list.toArray(new String[list.size()]);
+        }
+
+        @Override
+        public DispatchRegistration getDispatchService(String name) {
+            return dispatchServices.get(name);
+        }
+
+        @Override
+        public String getName() {
+            return "Composite Dispatch Service";
+        }
+
         @Override
         public Set<String> schemas() {
             Set<String> set = new LinkedHashSet<>();
-            dispatchServices.forEach(e -> {
+            dispatchServices.values().forEach(e -> {
                 set.addAll(e.schemas());
             });
 
@@ -119,7 +139,7 @@ public abstract class DispatchServiceSingleton implements DispatchService {
         @Override
         public Set<String> available() {
             Set<String> set = new LinkedHashSet<>();
-            dispatchServices.forEach(e -> {
+            dispatchServices.values().forEach(e -> {
                 set.addAll(e.available());
             });
             return set;

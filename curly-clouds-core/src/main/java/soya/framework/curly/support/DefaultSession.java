@@ -1,21 +1,23 @@
 package soya.framework.curly.support;
 
+import soya.framework.curly.Invocation;
 import soya.framework.curly.Processor;
 
-public class DefaultSession extends SessionSupport {
-
-    private final DispatchMethodInvocation inputData;
+public final class DefaultSession extends SessionSupport {
 
     private transient Evaluation evaluation;
 
-    public DefaultSession(String name, Object[] inputs) {
-        super(name);
-
-        this.inputData = DispatchMethodInvocation.builder(inputs).create();
+    protected DefaultSession(String uri) {
+        super(uri);
     }
 
+    protected DefaultSession(Invocation invocation) {
+        super(invocation);
+    }
+
+
     // ---------------------
-   public void setDefaultEvaluationProcessor(boolean updateStateBeforeProcess, Processor processor) {
+    public void setDefaultEvaluationProcessor(boolean updateStateBeforeProcess, Processor processor) {
         if (evaluation == null) {
             throw new IllegalStateException("Not in evaluation state.");
         }

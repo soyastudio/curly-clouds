@@ -1,23 +1,25 @@
 package soya.framework.curly.rest;
 
-import com.google.gson.Gson;
 import soya.framework.curly.DispatchContext;
-import soya.framework.curly.DispatchException;
+import soya.framework.curly.SessionDeserializer;
 import soya.framework.curly.support.UriDispatchService;
 
 import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
 
-@DispatchContext(schema = {
+@DispatchContext(name = "REST Dispatch Service", schema = {
         "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"
 })
 public final class RestDispatchService extends UriDispatchService {
 
     public RestDispatchService() {
-        super();
+        this(new RestSessionDeserializer());
+    }
+
+    public RestDispatchService(SessionDeserializer deserializer) {
+        super(deserializer);
     }
 
     @Override
@@ -45,29 +47,5 @@ public final class RestDispatchService extends UriDispatchService {
 
         this.registerMethods(set);
 
-    }
-
-    @Override
-    public Object dispatch(Object caller, String uri, Object[] args) throws DispatchException {
-        if (!contains(uri)) {
-            throw new DispatchException("Rest method is not defined for uri: " + uri);
-        }
-
-        RestDispatchMethod restMethod = (RestDispatchMethod) getDispatchMethod(uri);
-        RestOperation processor = (RestOperation) getProcessor(uri);
-
-        if (processor == null) {
-            throw new DispatchException("Rest processor is not defined for uri: " + uri);
-        }
-        RestProcessSession session = new RestProcessSession(restMethod.createInvocation(caller, args));
-        processor.process(session);
-
-        Gson gson = new Gson();
-
-        if(Response.class.isAssignableFrom(restMethod.getMethod().getReturnType())) {
-            return Response.ok(session.getCurrentState().getAsString()).build();
-        }
-
-        return gson.fromJson(session.getCurrentState().getAsString(), restMethod.getMethod().getGenericReturnType());
     }
 }

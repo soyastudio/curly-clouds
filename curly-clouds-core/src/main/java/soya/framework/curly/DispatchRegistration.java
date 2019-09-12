@@ -3,6 +3,8 @@ package soya.framework.curly;
 import java.util.Set;
 
 public interface DispatchRegistration {
+    String getName();
+
     Set<String> schemas();
 
     Set<String> available();

@@ -29,11 +29,6 @@ public class JerseyConfiguration extends SpringJerseyRestDispatcherConfig {
         return new DispatchExecutor(3, 30, 60, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>());
     }
 
-    @Bean
-    public DirectDispatchService directDispatchService() {
-        return new DirectDispatchService();
-    }
-
     public Swagger getSwagger() {
         return swagger;
     }

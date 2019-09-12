@@ -3,7 +3,7 @@ package soya.framework.curly.support;
 import soya.framework.curly.DispatchContext;
 import soya.framework.curly.DispatchException;
 
-@DispatchContext(schema = "direct://")
+@DispatchContext(name = "Direct Dispatch Service", schema = "direct://")
 public class DirectDispatchService extends UriDispatchService {
     @Override
     public void registerSubjects(Class<?>[] subjects) {
