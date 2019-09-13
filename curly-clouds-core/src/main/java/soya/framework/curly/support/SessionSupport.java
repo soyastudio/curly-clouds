@@ -46,6 +46,8 @@ public abstract class SessionSupport implements Session {
         this.id = UUID.randomUUID().toString();
         this.createdTime = System.currentTimeMillis();
         this.lastUpdatedTime = System.currentTimeMillis();
+
+        this.currentState = invocation;
     }
 
     @Override

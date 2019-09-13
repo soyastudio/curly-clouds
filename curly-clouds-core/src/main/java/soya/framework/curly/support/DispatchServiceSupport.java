@@ -62,6 +62,10 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
         this.methods = builder.build();
     }
 
+    public void registerProcessor(String uri, Operation operation) {
+
+    }
+
     public void registerProcessors(Map<String, ? extends Operation> processors) {
         if (processors == null) {
             return;
@@ -129,18 +133,27 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
         }
 
         Invocation invocation = getDispatchMethod(uri).createInvocation(caller, args);
-        Operation processor = getProcessor(uri);
-
-        if (processor == null) {
-            throw new DispatchException("Rest processor is not defined for uri: " + uri);
-        }
-
         Session session = createSession(invocation);
-        processor.process(session);
-        return deserializer.deserialize(session);
+        Operation operation = getProcessor(session.getUri());
+        return deserializer.deserialize(process(session, operation));
     }
 
     protected Session createSession(Invocation invocation) {
         return new DefaultSession(invocation);
+    }
+
+    protected Session process(Session session, Operation processor) {
+        if (processor == null) {
+            throw new DispatchException("Rest processor is not defined for uri: " + session.getUri());
+        }
+
+        processor.process(session);
+
+        return session;
+
+    }
+
+    protected SessionDeserializer getDeserializer() {
+        return deserializer;
     }
 }
