@@ -1,7 +1,6 @@
 package soya.framework.curly.support;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import soya.framework.curly.*;
 
 import java.util.*;
@@ -23,7 +22,7 @@ public abstract class DispatchServiceSingleton implements DispatchService {
 
     public static class DispatchServiceBuilder {
         private DispatchExecutor executor;
-        private Set<UriDispatchService> dispatchServices = new HashSet<>();
+        private Set<DispatchServiceSupport> dispatchServices = new HashSet<>();
 
         private DispatchServiceBuilder() {
         }
@@ -33,7 +32,7 @@ public abstract class DispatchServiceSingleton implements DispatchService {
             return this;
         }
 
-        public DispatchServiceBuilder register(UriDispatchService dispatchService) {
+        public DispatchServiceBuilder register(DispatchServiceSupport dispatchService) {
             dispatchServices.add(dispatchService);
             return this;
         }
@@ -45,12 +44,12 @@ public abstract class DispatchServiceSingleton implements DispatchService {
 
     static class CompositeDispatchService extends DispatchServiceSingleton implements DispatchRegistration, DispatchServiceComposite {
         private DispatchExecutor executor;
-        private ImmutableMap<String, UriDispatchService> dispatchServices;
+        private ImmutableMap<String, DispatchServiceSupport> dispatchServices;
         private Map<String, DispatchService> dispatchServiceMappings = new HashMap<>();
 
-        protected CompositeDispatchService(DispatchExecutor executor, Set<UriDispatchService> dispatchServices) {
+        protected CompositeDispatchService(DispatchExecutor executor, Set<DispatchServiceSupport> dispatchServices) {
             this.executor = executor;
-            ImmutableMap.Builder<String, UriDispatchService> builder = ImmutableMap.builder();
+            ImmutableMap.Builder<String, DispatchServiceSupport> builder = ImmutableMap.builder();
             dispatchServices.forEach(d -> {
                 builder.put(d.getName(), d);
             });
@@ -81,7 +80,7 @@ public abstract class DispatchServiceSingleton implements DispatchService {
                 dispatchService = dispatchServiceMappings.get(uri);
 
             } else {
-                for (UriDispatchService service : dispatchServices.values()) {
+                for (DispatchServiceSupport service : dispatchServices.values()) {
                     if (service.match(uri)) {
                         dispatchServiceMappings.put(uri, service);
                         dispatchService = service;
@@ -158,7 +157,6 @@ public abstract class DispatchServiceSingleton implements DispatchService {
 
         @Override
         public Operation getProcessor(String uri) {
-
             DispatchRegistration registration = (DispatchRegistration) findDispatchService(uri);
             return registration.getProcessor(uri);
         }

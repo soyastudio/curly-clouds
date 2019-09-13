@@ -2,14 +2,13 @@ package soya.framework.curly.support;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.gson.Gson;
 import soya.framework.curly.*;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-public abstract class UriDispatchService implements DispatchService, DispatchRegistration {
+public abstract class DispatchServiceSupport implements DispatchService, DispatchRegistration {
     private final String name;
     private ImmutableSet<String> schemas;
     private ImmutableMap<String, ? extends DispatchMethod> methods = ImmutableMap.<String, DispatchMethod>builder().build();
@@ -17,11 +16,11 @@ public abstract class UriDispatchService implements DispatchService, DispatchReg
 
     private SessionDeserializer deserializer;
 
-    public UriDispatchService() {
+    public DispatchServiceSupport() {
         this(new DefaultSessionDeserializer());
     }
 
-    public UriDispatchService(SessionDeserializer deserializer) {
+    public DispatchServiceSupport(SessionDeserializer deserializer) {
         this.deserializer = deserializer;
         Class<?> c = getClass();
         DispatchContext context = c.getAnnotation(DispatchContext.class);

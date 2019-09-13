@@ -2,7 +2,7 @@ package soya.framework.curly.rest;
 
 import soya.framework.curly.DispatchContext;
 import soya.framework.curly.SessionDeserializer;
-import soya.framework.curly.support.UriDispatchService;
+import soya.framework.curly.support.DispatchServiceSupport;
 
 import javax.ws.rs.Path;
 import java.lang.reflect.Method;
@@ -12,7 +12,7 @@ import java.util.Set;
 @DispatchContext(name = "REST Dispatch Service", schema = {
         "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"
 })
-public final class RestDispatchService extends UriDispatchService {
+public final class RestDispatchService extends DispatchServiceSupport {
 
     public RestDispatchService() {
         this(new RestSessionDeserializer());

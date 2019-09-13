@@ -5,7 +5,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import soya.framework.curly.DispatchExecutor;
 import soya.framework.curly.support.DispatchServiceSingleton;
-import soya.framework.curly.support.UriDispatchService;
+import soya.framework.curly.support.DispatchServiceSupport;
 
 import java.util.logging.Logger;
 
@@ -35,7 +35,7 @@ public class SpringJerseyRestDispatcherConfig extends JerseyRestDispatcherConfig
         builder.register(restDispatchService);
 
         // Other Dispatch Services:
-        applicationContext.getBeansOfType(UriDispatchService.class).entrySet().forEach(e -> {
+        applicationContext.getBeansOfType(DispatchServiceSupport.class).entrySet().forEach(e -> {
             builder.register(e.getValue());
             logger.info("register dispatch service: " + e.getValue().getClass().getName());
         });
