@@ -18,8 +18,18 @@ public class ResourceReaderProcessor implements Processor {
     @Override
     public void process(Session session) throws IOException {
         // TODO based on different protocol
-        InputStream inStream = getClass().getClassLoader().getResourceAsStream(url);
+        InputStream inStream = getClassLoader().getResourceAsStream(url);
+
         String json = IOUtils.toString(inStream);
         session.updateState(JsonData.fromJson(json));
+    }
+
+    private ClassLoader getClassLoader() {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if(classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+
+        return classLoader;
     }
 }
