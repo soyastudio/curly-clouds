@@ -138,6 +138,15 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
         return deserializer.deserialize(process(session, operation));
     }
 
+    protected static String getSchema(String uri) {
+        int index = uri.indexOf("://");
+        if(index < 0) {
+            throw new IllegalArgumentException("Can not parse uri: " + uri);
+        }
+
+        return uri.substring(0, index + 3);
+    }
+
     protected Session createSession(Invocation invocation) {
         return new DefaultSession(invocation);
     }
