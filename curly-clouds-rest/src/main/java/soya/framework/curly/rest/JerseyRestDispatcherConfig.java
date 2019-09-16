@@ -3,6 +3,7 @@ package soya.framework.curly.rest;
 import javassist.NotFoundException;
 import javassist.*;
 import org.glassfish.jersey.server.ResourceConfig;
+import soya.framework.curly.Dispatcher;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -28,7 +29,7 @@ public abstract class JerseyRestDispatcherConfig extends ResourceConfig {
         super(original);
     }
 
-    protected JerseyRestDispatcherConfig registerInterfaces(Class<?>[] intfs, Class<? extends RestDispatcher> dispatcherClass) {
+    protected JerseyRestDispatcherConfig registerInterfaces(Class<?>[] intfs, Class<? extends Dispatcher> dispatcherClass) {
         for (Class<?> intf : intfs) {
             if (intf.isInterface()) {
                 Class<?> c = generate(intf, dispatcherClass);
@@ -39,7 +40,7 @@ public abstract class JerseyRestDispatcherConfig extends ResourceConfig {
         return this;
     }
 
-    private Class<?> generate(Class<?> intf, Class<? extends RestDispatcher> dispatcherClass) {
+    private Class<?> generate(Class<?> intf, Class<? extends Dispatcher> dispatcherClass) {
         try {
             String name = intf.getName() + "Dispatcher";
 

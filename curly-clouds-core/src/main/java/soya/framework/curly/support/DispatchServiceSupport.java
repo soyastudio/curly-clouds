@@ -4,35 +4,27 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import soya.framework.curly.*;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
 public abstract class DispatchServiceSupport implements DispatchService, DispatchRegistration {
+
     private final String name;
     private ImmutableSet<String> schemas;
-    private ImmutableMap<String, ? extends DispatchMethod> methods = ImmutableMap.<String, DispatchMethod>builder().build();
-    private ImmutableMap<String, ? extends Operation> processors = ImmutableMap.<String, Operation>builder().build();
-
-    private SessionDeserializer deserializer;
+    private ImmutableMap<String, Operation> processors = ImmutableMap.<String, Operation>builder().build();
 
     public DispatchServiceSupport() {
-        this(new DefaultSessionDeserializer());
-    }
-
-    public DispatchServiceSupport(SessionDeserializer deserializer) {
-        this.deserializer = deserializer;
         Class<?> c = getClass();
         DispatchContext context = c.getAnnotation(DispatchContext.class);
         while (context == null) {
-            if(c.equals(Object.class)) {
+            if (c.equals(Object.class)) {
                 break;
             }
             c = c.getSuperclass();
             context = c.getAnnotation(DispatchContext.class);
         }
 
-        if(context == null) {
+        if (context == null) {
             throw new IllegalArgumentException("Cannot find annotation 'DispatchContext' from class: " + getClass().getName());
         }
         this.name = context.name();
@@ -48,25 +40,11 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
         schemas = builder.build();
     }
 
-    protected void registerMethods(Collection<? extends DispatchMethod> methods) {
-        if(methods == null) {
-            return;
-        }
-
-        ImmutableMap.Builder<String, DispatchMethod> builder = ImmutableMap.<String, DispatchMethod>builder();
-        builder.putAll(this.methods);
-        methods.forEach(m -> {
-            builder.put(m.getUri(), m);
-        });
-
-        this.methods = builder.build();
-    }
-
     public void registerProcessor(String uri, Operation operation) {
 
     }
 
-    public void registerProcessors(Map<String, ? extends Operation> processors) {
+    public void registerProcessors(Map<String, Operation> processors) {
         if (processors == null) {
             return;
         }
@@ -75,7 +53,7 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
         builder.putAll(this.processors);
 
         processors.entrySet().forEach(e -> {
-            if(match(e.getKey())) {
+            if (match(e.getKey())) {
                 builder.put(e.getKey(), e.getValue());
             }
         });
@@ -84,8 +62,8 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
     }
 
     public boolean match(String uri) {
-        for(String s: schemas) {
-            if(uri.startsWith(s)) {
+        for (String s : schemas) {
+            if (uri.startsWith(s)) {
                 return true;
             }
         }
@@ -104,65 +82,24 @@ public abstract class DispatchServiceSupport implements DispatchService, Dispatc
     }
 
     @Override
-    public Set<String> available() {
-        return methods.keySet();
-    }
-
-    @Override
-    public boolean contains(String uri) {
-        return methods.containsKey(uri);
-    }
-
-    @Override
-    public DispatchMethod getDispatchMethod(String uri) {
-        return methods.get(uri);
-    }
-
-    @Override
     public Operation getProcessor(String uri) {
-        return processors.get(uri);
-    }
-
-    public abstract void registerSubjects(Class<?>[] subjects);
-
-
-    @Override
-    public Object dispatch(Object caller, String uri, Object[] args) throws DispatchException {
-        if (!contains(uri)) {
-            throw new DispatchException("Rest method is not defined for uri: " + uri);
+        Operation operation = null;
+        if(processors.containsKey(uri)) {
+            operation = processors.get(uri);
+        } else {
+            operation = create(uri);
+            processors.put(uri, operation);
         }
 
-        Invocation invocation = getDispatchMethod(uri).createInvocation(caller, args);
-        Session session = createSession(invocation);
-        Operation operation = getProcessor(session.getUri());
-        return deserializer.deserialize(process(session, operation));
+        return operation;
     }
 
     protected static String getSchema(String uri) {
         int index = uri.indexOf("://");
-        if(index < 0) {
+        if (index < 0) {
             throw new IllegalArgumentException("Can not parse uri: " + uri);
         }
 
         return uri.substring(0, index + 3);
-    }
-
-    protected Session createSession(Invocation invocation) {
-        return new DefaultSession(invocation);
-    }
-
-    protected Session process(Session session, Operation processor) {
-        if (processor == null) {
-            throw new DispatchException("Rest processor is not defined for uri: " + session.getUri());
-        }
-
-        processor.process(session);
-
-        return session;
-
-    }
-
-    protected SessionDeserializer getDeserializer() {
-        return deserializer;
     }
 }

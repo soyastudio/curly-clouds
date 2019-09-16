@@ -1,6 +1,7 @@
 package soya.framework.curly.rest;
 
 import com.google.common.collect.ImmutableList;
+import soya.framework.curly.Dispatch;
 import soya.framework.curly.DispatchMethod;
 
 import javax.annotation.Nonnull;
@@ -20,6 +21,8 @@ public final class RestDispatchMethod implements DispatchMethod {
     private final HttpMethod httpMethod;
     private final ImmutableList<RestParameter> parameters;
     private ResponseEntityType responseEntityType = new ResponseEntityType();
+    private String dispatchTo;
+    private String listenTo;
 
     private RestDispatchMethod(Method method) throws RestMethodException {
         this.method = method;
@@ -104,6 +107,12 @@ public final class RestDispatchMethod implements DispatchMethod {
         } else {
             responseEntityType.entityType = returnType;
         }
+
+        Dispatch dispatchAnnotation = method.getAnnotation(Dispatch.class);
+        if(dispatchAnnotation != null) {
+            this.dispatchTo = dispatchAnnotation.uri();
+            this.listenTo = dispatchAnnotation.listenTo();
+        }
     }
 
     public Method getMethod() {
@@ -117,6 +126,16 @@ public final class RestDispatchMethod implements DispatchMethod {
     @Override
     public String[] getParameterNames() {
         return parameterNames;
+    }
+
+    @Override
+    public String dispatchTo() {
+        return dispatchTo;
+    }
+
+    @Override
+    public String listenTo() {
+        return listenTo;
     }
 
     public ResponseEntityType getResponseEntityType() {

@@ -9,5 +9,9 @@ public interface DispatchMethod {
 
     String[] getParameterNames();
 
+    String dispatchTo();
+
+    String listenTo();
+
     Invocation createInvocation(Object caller, Object[] arguments) throws IllegalArgumentException;
 }

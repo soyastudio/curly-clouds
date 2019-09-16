@@ -4,9 +4,12 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import soya.framework.curly.DispatchExecutor;
+import soya.framework.curly.Dispatcher;
 import soya.framework.curly.support.DispatchServiceSingleton;
 import soya.framework.curly.support.DispatchServiceSupport;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public class SpringJerseyRestDispatcherConfig extends JerseyRestDispatcherConfig implements ApplicationContextAware {
@@ -23,22 +26,23 @@ public class SpringJerseyRestDispatcherConfig extends JerseyRestDispatcherConfig
         DispatchServiceSingleton.DispatchServiceBuilder builder = DispatchServiceSingleton.builder();
         try {
             DispatchExecutor executor = applicationContext.getBean(DispatchExecutor.class);
-            builder.setExecutor(executor);
+            builder.setExecutor(executor).setDeserializer(new RestSessionDeserializer());
+
         } catch (BeansException e) {
             // do nothing
         }
 
-        // Rest Dispatch Service:
-        RestDispatchService restDispatchService = new RestDispatchService();
-        restDispatchService.registerSubjects(getClasses().toArray(new Class<?>[getClasses().size()]));
-        restDispatchService.registerProcessors(applicationContext.getBeansOfType(RestOperation.class));
-        builder.register(restDispatchService);
-
         // Other Dispatch Services:
         applicationContext.getBeansOfType(DispatchServiceSupport.class).entrySet().forEach(e -> {
-            builder.register(e.getValue());
+            builder.registerDispatchService(e.getValue());
             logger.info("register dispatch service: " + e.getValue().getClass().getName());
         });
+
+        RestSubjectRegistration subjectRegistration = new RestSubjectRegistration();
+        Set<Class<?>> set = new HashSet<>();
+        Class<?>[] classes = getClasses().toArray(new Class[getClasses().size()]);
+        subjectRegistration.registerSubjects(classes);
+        builder.registerSubject(subjectRegistration);
 
         builder.build();
 

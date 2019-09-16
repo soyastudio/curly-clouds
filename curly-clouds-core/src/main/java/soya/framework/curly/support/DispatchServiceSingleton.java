@@ -2,30 +2,38 @@ package soya.framework.curly.support;
 
 import com.google.common.collect.ImmutableMap;
 import soya.framework.curly.*;
-import soya.framework.curly.processors.RedirectProcessor;
 
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-public abstract class DispatchServiceSingleton implements DispatchService {
-    protected static DispatchService instance;
+public abstract class DispatchServiceSingleton {
+    protected static DispatchServiceSingleton instance;
 
     protected DispatchServiceSingleton() {
     }
 
-    public static DispatchService getInstance() {
+    public abstract Object dispatch(String uri, Object[] args, Object caller) throws DispatchException;
+
+    public static DispatchServiceSingleton getInstance() {
         return instance;
     }
 
     public static DispatchServiceBuilder builder() {
+        if (instance != null) {
+            throw new IllegalArgumentException("The instance of dispatchServiceSingleton has already created");
+        }
+
         return new DispatchServiceBuilder();
     }
 
     public static class DispatchServiceBuilder {
+
         private DispatchExecutor executor;
+        private SessionDeserializer deserializer;
         private Set<DispatchServiceSupport> dispatchServices = new HashSet<>();
+        private Set<SubjectRegistration> subjectRegistrations = new HashSet<>();
 
         private DispatchServiceBuilder() {
         }
@@ -35,174 +43,147 @@ public abstract class DispatchServiceSingleton implements DispatchService {
             return this;
         }
 
-        public DispatchServiceBuilder register(DispatchServiceSupport dispatchService) {
+        public DispatchServiceBuilder setDeserializer(SessionDeserializer deserializer) {
+            this.deserializer = deserializer;
+            return this;
+        }
+
+        public DispatchServiceBuilder registerDispatchService(DispatchServiceSupport dispatchService) {
             dispatchServices.add(dispatchService);
             return this;
         }
 
-        public DispatchService build() {
-            return new CompositeDispatchService(executor, dispatchServices);
+        public DispatchServiceBuilder registerSubject(SubjectRegistration registration) {
+            subjectRegistrations.add(registration);
+            return this;
+        }
+
+        public void build() {
+            instance = new CompositeDispatchService(dispatchServices, subjectRegistrations, executor, deserializer);
         }
     }
 
-    static class CompositeDispatchService extends DispatchServiceSingleton implements DispatchRegistration, DispatchServiceComposite {
+    static class CompositeDispatchService extends DispatchServiceSingleton implements Registration {
         private DispatchExecutor executor;
-        private ImmutableMap<String, DispatchServiceSupport> dispatchServices;
+        private SessionDeserializer deserializer;
+
+        private final SubjectRegistration[] subjectRegistrations;
+        private final ImmutableMap<String, DispatchServiceSupport> dispatchServices;
+        private final ImmutableMap<String, DispatchMethod> dispatchMethods;
+
         private Map<String, DispatchServiceSupport> dispatchServiceMappings = new HashMap<>();
 
-        protected CompositeDispatchService(DispatchExecutor executor, Set<DispatchServiceSupport> dispatchServices) {
+        protected CompositeDispatchService(Set<DispatchServiceSupport> dispatchServices,
+                                           Set<SubjectRegistration> subjectRegistrations, DispatchExecutor executor, SessionDeserializer deserializer) {
             this.executor = executor;
+            this.deserializer = deserializer;
+            this.subjectRegistrations = subjectRegistrations.toArray(new SubjectRegistration[subjectRegistrations.size()]);
+
             ImmutableMap.Builder<String, DispatchServiceSupport> builder = ImmutableMap.builder();
             dispatchServices.forEach(d -> {
-                builder.put(d.getName(), d);
+                for (String schema : d.schemas()) {
+                    builder.put(schema, d);
+                }
             });
             this.dispatchServices = builder.build();
-            instance = this;
+
+            ImmutableMap.Builder<String, DispatchMethod> methodBuilder = ImmutableMap.builder();
+            for (SubjectRegistration subjectRegistration : subjectRegistrations) {
+                for (DispatchMethod dispatchMethod : subjectRegistration.dispatchMethods()) {
+                    methodBuilder.put(dispatchMethod.getUri(), dispatchMethod);
+                }
+            }
+            this.dispatchMethods = methodBuilder.build();
         }
 
         @Override
-        public Object dispatch(Object caller, String uri, Object[] args) throws DispatchException {
-            DispatchServiceSupport dispatchService = findDispatchService(uri);
-            if (dispatchService != null) {
-                Method method = dispatchService.getDispatchMethod(uri).getMethod();
-                if (method.getAnnotation(Dispatch.class) != null) {
-                    try {
-                        return doRedirect(caller, uri, args, dispatchService);
-
-                    } catch (Exception e) {
-                        throw new ProcessException(e);
-                    }
-
-                } else {
-                    try {
-                        return doDispatch(caller, uri, args, dispatchService);
-
-                    } catch (ExecutionException | InterruptedException e) {
-                        throw new ProcessException(e);
-                    }
-                }
-
-            } else {
-                throw new DispatchException("Cannot dispatch  '" + uri + "': DispatchService is not found.");
-
-            }
+        public SubjectRegistration[] subjectRegistrations() {
+            return subjectRegistrations;
         }
 
-        private Object doDispatch(Object caller, String uri, Object[] args, DispatchService dispatcher) throws ExecutionException, InterruptedException {
-
-            if (executor == null) {
-                return dispatcher.dispatch(caller, uri, args);
-
-            } else {
-                Future<Object> future = executor.submit(() -> {
-                    return dispatcher.dispatch(caller, uri, args);
-                });
-
-                while (!future.isDone()) {
-                    Thread.sleep(50l);
-                }
-
-                return future.get();
-            }
+        @Override
+        public DispatchRegistration[] dispatchRegistrations() {
+            return dispatchServices.values().toArray(new DispatchRegistration[dispatchServices.size()]);
         }
 
-        private Object doRedirect(Object caller, String uri, Object[] args, DispatchServiceSupport dispatcher) throws Exception {
-            SessionDeserializer deserializer = dispatcher.getDeserializer();
-            DispatchMethod dispatchMethod = dispatcher.getDispatchMethod(uri);
-            Dispatch dispatch = dispatchMethod.getMethod().getAnnotation(Dispatch.class);
-            String redirectUri = dispatch.uri();
-            DispatchServiceSupport redirect = findDispatchService(redirectUri);
-
-            // Cannot do redirect to same dispatcher service
-            if(redirect.getName().equals(dispatcher.getName())) {
-                throw new IllegalArgumentException("Can not redirect from '" + uri + "' to '" + redirectUri + "'.");
-            }
-
-            Session session = dispatcher.createSession(dispatchMethod.createInvocation(caller, args));
-            if (executor == null) {
-                redirect.process(session, redirect.getProcessor(redirectUri));
-
-            } else {
-                Future<Session> future = executor.submit(() -> {
-                    return redirect.process(session, redirect.getProcessor(redirectUri));
-                });
-
-                while (!future.isDone()) {
-                    Thread.sleep(50l);
-                }
-            }
-
-            return deserializer.deserialize(session);
+        @Override
+        public DispatchMethod getDispatchMethod(String uri) {
+            return dispatchMethods.get(uri);
         }
 
-        private DispatchServiceSupport findDispatchService(String uri) {
-            DispatchServiceSupport dispatchService = null;
-            if (dispatchServiceMappings.containsKey(uri)) {
-                dispatchService = dispatchServiceMappings.get(uri);
-
-            } else {
-                for (DispatchServiceSupport service : dispatchServices.values()) {
-                    if (service.match(uri)) {
-                        dispatchServiceMappings.put(uri, service);
-                        dispatchService = service;
-                        break;
-                    }
-                }
-            }
-
-            return dispatchService;
-        }
-
-        public String[] getDispatchServices() {
+        @Override
+        public String[] schemas() {
             List<String> list = new ArrayList<>(dispatchServices.keySet());
             Collections.sort(list);
             return list.toArray(new String[list.size()]);
         }
 
         @Override
-        public DispatchRegistration getDispatchService(String name) {
-            return dispatchServices.get(name);
+        public DispatchService getDispatchService(String uri) {
+            if (dispatchServiceMappings.containsKey(uri)) {
+                return dispatchServiceMappings.get(uri);
+            } else {
+                int index = uri.indexOf("://");
+                if (index < 0) {
+                    throw new IllegalArgumentException("Cannot parse uri: " + uri);
+                }
+
+                String schema = uri.substring(0, index + 3);
+                if (!dispatchServices.containsKey(schema)) {
+                    throw new IllegalArgumentException("Dispatch service is not registered for " + schema);
+                }
+
+                DispatchServiceSupport dispatchService = dispatchServices.get(schema);
+                dispatchServiceMappings.put(uri, dispatchService);
+
+                return dispatchService;
+            }
         }
 
         @Override
-        public String getName() {
-            return "Composite Dispatch Service";
+        public SessionDeserializer getDeserializer() {
+            return deserializer;
         }
 
         @Override
-        public Set<String> schemas() {
-            Set<String> set = new LinkedHashSet<>();
-            dispatchServices.values().forEach(e -> {
-                set.addAll(e.schemas());
-            });
+        public Object dispatch(String uri, Object[] args, Object caller) throws DispatchException {
+            DispatchMethod dispatchMethod = getDispatchMethod(uri);
+            Method method = dispatchMethod.getMethod();
+            Dispatch dispatch = method.getAnnotation(Dispatch.class);
 
-            return set;
-        }
+            Operation operation = null;
+            if (dispatch != null) {
+                String duri = dispatch.uri();
+                DispatchService dispatchService = this.getDispatchService(duri);
+                operation = dispatchService.create(duri);
+            } else {
+                operation = getDispatchService(uri).create(uri);
+            }
 
-        @Override
-        public Set<String> available() {
-            Set<String> set = new LinkedHashSet<>();
-            dispatchServices.values().forEach(e -> {
-                set.addAll(e.available());
-            });
-            return set;
-        }
+            Session session = new DefaultSession(dispatchMethod.createInvocation(caller, args));
+            if (executor != null && operation instanceof CallableOperation) {
+                CallableOperation callableOperation = (CallableOperation) operation;
+                Future<Session> future = callableOperation.call(session, executor);
+                while (future.isDone()) {
+                    try {
+                        Thread.sleep(50L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
 
-        @Override
-        public boolean contains(String uri) {
-            return false;
-        }
+                try {
+                    session = future.get();
 
-        @Override
-        public DispatchMethod getDispatchMethod(String uri) {
-            DispatchRegistration registration = (DispatchRegistration) findDispatchService(uri);
-            return registration.getDispatchMethod(uri);
-        }
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new DispatchException(e);
 
-        @Override
-        public Operation getProcessor(String uri) {
-            DispatchRegistration registration = (DispatchRegistration) findDispatchService(uri);
-            return registration.getProcessor(uri);
+                }
+            } else {
+                operation.process(session);
+            }
+
+            return deserializer.deserialize(session);
         }
     }
 }

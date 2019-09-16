@@ -2,8 +2,8 @@ package soya.framework.curly.application.api;
 
 import io.swagger.annotations.Api;
 import org.springframework.stereotype.Component;
+import soya.framework.curly.Dispatcher;
 import soya.framework.curly.rest.ResponseEntity;
-import soya.framework.curly.rest.RestDispatcher;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -12,7 +12,7 @@ import javax.ws.rs.core.Response;
 @Component
 @Path("/branch")
 @Api(value = "Bank Branch API")
-public class BranchServiceDispatcher extends RestDispatcher {
+public class BranchServiceDispatcher extends Dispatcher {
 
     @GET
     @Path("/list")
