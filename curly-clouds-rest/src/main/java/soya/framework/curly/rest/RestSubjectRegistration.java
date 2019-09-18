@@ -13,6 +13,6 @@ public class RestSubjectRegistration extends SubjectRegistrationSupport<RestDisp
             return null;
         }
 
-        return RestDispatchMethod.fromMethod(method);
+        return new RestDispatchMethod(method);
     }
 }

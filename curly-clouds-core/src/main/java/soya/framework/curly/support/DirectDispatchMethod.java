@@ -9,14 +9,24 @@ import java.lang.reflect.Parameter;
 
 public final class DirectDispatchMethod implements DispatchMethod {
 
-    private final Method method;
+    private final transient Method method;
+
     private final String uri;
     private final String[] parameterNames;
+
+    private String dispatchTo;
+    private String listenTo;
 
     private DirectDispatchMethod(Method method, String uri, String[] parameterNames) {
         this.method = method;
         this.uri = uri;
         this.parameterNames = parameterNames;
+
+        Dispatch dispatch = method.getAnnotation(Dispatch.class);
+        if(dispatch != null) {
+            this.dispatchTo = dispatch.uri();
+            this.listenTo = dispatch.listenTo();
+        }
     }
 
     @Override
@@ -32,6 +42,16 @@ public final class DirectDispatchMethod implements DispatchMethod {
     @Override
     public String[] getParameterNames() {
         return getParameterNames();
+    }
+
+    @Override
+    public String dispatchTo() {
+        return dispatchTo;
+    }
+
+    @Override
+    public String listenTo() {
+        return listenTo;
     }
 
     @Override
