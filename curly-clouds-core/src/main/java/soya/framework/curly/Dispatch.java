@@ -12,6 +12,6 @@ public @interface Dispatch {
 
     String[] parameters() default {};
 
-    String listenTo() default "";
+    String subscribe() default "";
 
  }

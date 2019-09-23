@@ -36,11 +36,9 @@
         <jodatime-version>2.7</jodatime-version>
         <joda-money.version>1.0.1</joda-money.version>
 
-        <codesorcerer.version>2.4.4</codesorcerer.version>
         <javapoet.version>1.9.0</javapoet.version>
 
-        <fuselet.version>0.0.8</fuselet.version>
-        <fuse-shared.version>0.0.8</fuse-shared.version>
+        <javassist.version>3.25.0-GA</javassist.version>
 
     </properties>
 
@@ -88,7 +86,6 @@
                 <version>${joda-money.version}</version>
             </dependency>
 
-
             <!-- jolt -->
             <dependency>
                 <groupId>com.bazaarvoice.jolt</groupId>
@@ -123,6 +120,13 @@
                 <groupId>net.sf.saxon</groupId>
                 <artifactId>Saxon-HE</artifactId>
                 <version>${saxon.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.javassist/javassist -->
+            <dependency>
+                <groupId>org.javassist</groupId>
+                <artifactId>javassist</artifactId>
+                <version>${javassist.version}</version>
             </dependency>
 
         </dependencies>

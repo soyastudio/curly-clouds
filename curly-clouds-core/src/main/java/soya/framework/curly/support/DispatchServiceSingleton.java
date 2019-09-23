@@ -31,6 +31,7 @@ public abstract class DispatchServiceSingleton {
     public static class DispatchServiceBuilder {
 
         private DispatchExecutor executor;
+        private CallbackFactory callbackFactory;
         private SessionDeserializer deserializer;
         private Set<DispatchServiceSupport> dispatchServices = new HashSet<>();
         private Set<SubjectRegistration> subjectRegistrations = new HashSet<>();
@@ -40,6 +41,11 @@ public abstract class DispatchServiceSingleton {
 
         public DispatchServiceBuilder setExecutor(DispatchExecutor executor) {
             this.executor = executor;
+            return this;
+        }
+
+        public DispatchServiceBuilder setCallbackFactory(CallbackFactory callbackFactory) {
+            this.callbackFactory = callbackFactory;
             return this;
         }
 
@@ -59,12 +65,13 @@ public abstract class DispatchServiceSingleton {
         }
 
         public void build() {
-            instance = new CompositeDispatchService(dispatchServices, subjectRegistrations, executor, deserializer);
+            instance = new CompositeDispatchService(dispatchServices, subjectRegistrations, executor, callbackFactory, deserializer);
         }
     }
 
     static class CompositeDispatchService extends DispatchServiceSingleton implements Registration {
         private DispatchExecutor executor;
+        private CallbackFactory callbackFactory;
         private SessionDeserializer deserializer;
 
         private final SubjectRegistration[] subjectRegistrations;
@@ -74,8 +81,9 @@ public abstract class DispatchServiceSingleton {
         private Map<String, DispatchServiceSupport> dispatchServiceMappings = new HashMap<>();
 
         protected CompositeDispatchService(Set<DispatchServiceSupport> dispatchServices,
-                                           Set<SubjectRegistration> subjectRegistrations, DispatchExecutor executor, SessionDeserializer deserializer) {
+                                           Set<SubjectRegistration> subjectRegistrations, DispatchExecutor executor, CallbackFactory callbackFactory, SessionDeserializer deserializer) {
             this.executor = executor;
+            this.callbackFactory = callbackFactory;
             this.deserializer = deserializer;
             this.subjectRegistrations = subjectRegistrations.toArray(new SubjectRegistration[subjectRegistrations.size()]);
 
@@ -160,7 +168,16 @@ public abstract class DispatchServiceSingleton {
                 operation = getDispatchService(uri).create(uri);
             }
 
-            Session session = new DefaultSession(dispatchMethod.createInvocation(caller, args));
+            Invocation invocation = dispatchMethod.createInvocation(caller, args);
+            Session session = new DefaultSession(invocation);
+
+            if(callbackFactory != null) {
+                dispatch(session, operation, callbackFactory.create(invocation));
+            } else {
+                dispatch(session, operation);
+            }
+
+
             if (executor != null && operation instanceof CallableOperation) {
                 CallableOperation callableOperation = (CallableOperation) operation;
                 Future<Session> future = callableOperation.call(session, executor);
@@ -184,6 +201,65 @@ public abstract class DispatchServiceSingleton {
             }
 
             return deserializer.deserialize(session);
+        }
+
+        private void dispatch(Session session, Operation operation) {
+            if (executor != null && operation instanceof CallableOperation) {
+                CallableOperation callableOperation = (CallableOperation) operation;
+                Future<Session> future = callableOperation.call(session, executor);
+                while (future.isDone()) {
+                    try {
+                        Thread.sleep(50L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                try {
+                    session = future.get();
+
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new DispatchException(e);
+
+                }
+            } else {
+                operation.process(session);
+            }
+        }
+
+        private void dispatch(Session session, Operation operation, Callback callback) {
+            if (executor != null && operation instanceof CallableOperation) {
+                CallableOperation callableOperation = (CallableOperation) operation;
+                Future<Session> future = callableOperation.call(session, executor);
+                while (future.isDone()) {
+                    try {
+                        Thread.sleep(50L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                try {
+                    session = future.get();
+                } catch (InterruptedException | ExecutionException | ProcessException e) {
+                    if(!callback.onFailure(session, e)) {
+                        throw new DispatchException(e);
+
+                    }
+
+                }
+            } else {
+                try {
+                    operation.process(session);
+                } catch (ProcessException e) {
+                    if(!callback.onFailure(session, e)) {
+                        throw new DispatchException(e);
+
+                    }
+                }
+            }
+
+            callback.onSuccess(session);
         }
     }
 }

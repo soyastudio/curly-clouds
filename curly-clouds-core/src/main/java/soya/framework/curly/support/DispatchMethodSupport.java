@@ -30,12 +30,12 @@ public abstract class DispatchMethodSupport implements DispatchMethod {
 
     @Override
     public String dispatchTo() {
-        return method.getAnnotation(DISPATCH, DispatchAnnotation.class).dispatchTo;
+        return method.getAnnotation(DISPATCH, DispatchAnnotation.class).uri;
     }
 
     @Override
     public String listenTo() {
-        return method.getAnnotation(DISPATCH, DispatchAnnotation.class).listenTo;
+        return method.getAnnotation(DISPATCH, DispatchAnnotation.class).subscribe;
     }
 
     public TypeDescriptor getResponseType() {
@@ -45,12 +45,12 @@ public abstract class DispatchMethodSupport implements DispatchMethod {
     protected abstract MethodDescriptor fromMethod(Method method);
 
     public static class DispatchAnnotation {
-        private final String dispatchTo;
-        private final String listenTo;
+        private final String uri;
+        private final String subscribe;
 
-        public DispatchAnnotation(String dispatchTo, String listenTo) {
-            this.dispatchTo = dispatchTo;
-            this.listenTo = listenTo;
+        public DispatchAnnotation(String uri, String subscribe) {
+            this.uri = uri;
+            this.subscribe = subscribe != null && !subscribe.isEmpty() ? subscribe : null;
         }
     }
 }

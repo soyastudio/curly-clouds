@@ -13,4 +13,4 @@ public interface Registration {
     DispatchService getDispatchService(String uri);
 
     SessionDeserializer getDeserializer();
- }
+}

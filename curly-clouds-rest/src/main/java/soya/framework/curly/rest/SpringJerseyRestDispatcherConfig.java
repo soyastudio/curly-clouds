@@ -44,6 +44,8 @@ public class SpringJerseyRestDispatcherConfig extends JerseyRestDispatcherConfig
         subjectRegistration.registerSubjects(classes);
         builder.registerSubject(subjectRegistration);
 
+        builder.setCallbackFactory(new RestMethodCallbackFactory());
+
         builder.build();
 
     }

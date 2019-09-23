@@ -33,7 +33,6 @@ public final class MethodParameterDescriptor extends AnnotatableDescriptor {
         return new MethodParameterBuilder(parameter);
     }
 
-
     public static class MethodParameterBuilder extends AnnotatableDescriptorBuilder<MethodParameterBuilder> {
         private TypeDescriptor type;
 
@@ -44,8 +43,9 @@ public final class MethodParameterDescriptor extends AnnotatableDescriptor {
             if (parameter.getParameterizedType() != null) {
                 type = TypeDescriptor.fromType(parameter.getParameterizedType());
             } else {
-                type = TypeDescriptor.fromClass(parameter.getType());
+                type = TypeDescriptor.fromType(parameter.getType());
             }
+
             this.name = parameter.getName();
         }
 

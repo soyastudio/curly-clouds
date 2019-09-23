@@ -97,7 +97,7 @@ public final class RestDispatchMethod extends DispatchMethodSupport {
         // dispatch:
         Dispatch dispatch = method.getAnnotation(Dispatch.class);
         if (dispatch != null) {
-            builder.annotate(DISPATCH, new DispatchAnnotation(dispatch.uri(), dispatch.listenTo()));
+            builder.annotate(DISPATCH, new DispatchAnnotation(dispatch.uri(), dispatch.subscribe()));
         }
 
         return builder.build();
@@ -125,7 +125,8 @@ public final class RestDispatchMethod extends DispatchMethodSupport {
             params.put(rp.getName(), arg);
         }
 
-        return new RestMethodInvocation(this, caller, params);
+        CurlyRestContext curlyRestContext = CurlyRestContext.getCurrentContext();
+        return new RestMethodInvocation(this, caller, params, curlyRestContext);
     }
 
     public static enum HttpMethod {

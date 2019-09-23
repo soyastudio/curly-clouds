@@ -63,8 +63,7 @@
         <dependency>
             <groupId>soya.framework.curly</groupId>
             <artifactId>curly-clouds-rest</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- spring boot -->

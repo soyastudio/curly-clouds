@@ -25,7 +25,7 @@ public final class DirectDispatchMethod implements DispatchMethod {
         Dispatch dispatch = method.getAnnotation(Dispatch.class);
         if(dispatch != null) {
             this.dispatchTo = dispatch.uri();
-            this.listenTo = dispatch.listenTo();
+            this.listenTo = dispatch.subscribe();
         }
     }
 
